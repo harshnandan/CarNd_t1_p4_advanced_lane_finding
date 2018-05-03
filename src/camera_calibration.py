@@ -42,7 +42,6 @@ def calibrateImg(imgList, nx, ny):
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[0:2][::-1], None, None)        
     return mtx, dist, cornerMarkedImg
 
-
 def perspectiveTransform(corners, image_size, nx):
     offset = 100
     src = np.float32([corners[0], corners[nx-1], corners[-1], corners[-nx]])
@@ -66,7 +65,7 @@ pickle.dump(cam_calibration, open(r'..\cam_calibration.p', 'wb'))
 
 
 # select a samaple image to test undistortion
-img = cv2.imread(r'../camera_cal/calibration5.jpg')
+img = cv2.imread(r'../camera_cal/straight_lines1.jpg')
 unDistortedImg= cv2.undistort(img, mtx, dist, None, mtx)
 
 # plot the sample undistortion  
