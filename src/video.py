@@ -14,6 +14,8 @@ class image_processor_class():
         self.left_fit_prev = np.array([0, 0, 0])
         self.right_fit_prev = np.array([0, 0, 0])
         
+#         self.debugBand = 
+        
         # process video clip
         white_clip = videoClip.fl_image(self.process_image) 
         white_clip.write_videofile(outputFile, audio=False)        
