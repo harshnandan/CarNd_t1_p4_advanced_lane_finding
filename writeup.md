@@ -134,7 +134,7 @@ The lane line detected in warped image can be mapped back to the perspective vie
 
 The only difference for the video processing timeline and image processing timeline is that in the video processing timeline the detection of line lane in binary image from second frame onward is limited to the region next to the lane detected in previous frame. This not only makes finding the lanes faster, but it also throws out the outliers which do appear as the car is moving along the road. This also results in smoother lane detection through time.
 
-Here's a [link to higher quality video](https://youtu.be/WXUYMB9sTPs)(./project_video.mp4)
+Here's a [link to higher quality video](https://youtu.be/WXUYMB9sTPs)
 
 ![alt text][image12]
 
