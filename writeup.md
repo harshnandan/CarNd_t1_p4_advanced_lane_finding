@@ -75,11 +75,11 @@ To combine these two thresholding methods a logical 'OR’ operator is used and 
 
 The perspective transform is an operation which translates the perspective image into a bird’s eye view. The transform is calculated by identifying 4 points in the perspective image ('src’) and telling the OpenCV function 'getPerspectiveTransform’ about the corresponding location of these 4 points in the warped image ('dst’). For this assignment 2 points on the left lane line and 2 points on the right lane line are chosen in the undistorted image with straight lane line and because the lane lines are straight it is easy to tell the corresponding location in bird’s eye view. 
 
-'M = cv2.getPerspectiveTransform(src, dst)’
+'M = cv2.getPerspectiveTransform(src, dst)'
 
 An inverse transform can also be calculated which will transform points in warped image to points in perspective image by switching 'src’ and 'dst’.
 
-'M = cv2.getPerspectiveTransform(dst, src)’
+'M = cv2.getPerspectiveTransform(dst, src)'
 
 The code for calculating this transform is in 'calcPerspectiveTransform’ (line 105 to 127) function in 'image_processing_pipeline’.
 
