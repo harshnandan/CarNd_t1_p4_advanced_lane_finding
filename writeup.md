@@ -20,7 +20,7 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 
 [image1]: ./img/undistort_chessboard.png "Undistorted"
-[image2]: ./img/undistorted_image.jpg "Road Undistorted"
+[image2]: ./img/undistorted_image.png "Road Undistorted"
 [image3]: ./img/various_thresholding.png "Binary Example"
 [image4]: ./img/threshold_image.png "Binary combined"
 [image5]: ./img/warped_image.png "Warped Image with Visual Fit"
@@ -41,47 +41,47 @@ The goals / steps of this project are the following:
 
 ### Camera Calibration
 
-It is essential to correct for any distortions introduced by camera. A standalone script ‘camera_calibration.py’ computes the cameta matrix ‘mtx’ and the distortion coefficient ‘dist’ and ‘pickle’ these entities into ‘cam_calibration.p’. The script works through number of calibration images supplied with the problem. The script identifies the corners within the chess board image and computes the camera matrix and distortion coefficient to map them to real world undistorted coordinates provided by the user. The result of applying camera distortion can be clearly seen in the image below.
+It is essential to correct for any distortions introduced by camera. A standalone script 'camera_calibration.py’ computes the cameta matrix 'mtx’ and the distortion coefficient 'dist’ and 'pickle’ these entities into 'cam_calibration.p’. The script works through number of calibration images supplied with the problem. The script identifies the corners within the chess board image and computes the camera matrix and distortion coefficient to map them to real world undistorted coordinates provided by the user. The result of applying camera distortion can be clearly seen in the image below.
 
-The camera calibration function provided within openCV requires specification of ‘objpoints’, which are the (x, y, z) coordinates of the chessboard corners in the world. As the chessboard is 2D the ‘z’ coordinate can be assumed to be ‘0’. ‘objpoints’ is appended to a list every time all the corners are detected on the image. ‘imgpoints’ will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
+The camera calibration function provided within openCV requires specification of 'objpoints’, which are the (x, y, z) coordinates of the chessboard corners in the world. As the chessboard is 2D the 'z’ coordinate can be assumed to be '0’. 'objpoints’ is appended to a list every time all the corners are detected on the image. 'imgpoints’ will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
 
-‘ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)’
+'ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)'
 
 I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
 
-‘unDistortedImg= cv2.undistort(cornerMarkedImg, mtx, dist, None, mtx)’
+'unDistortedImg= cv2.undistort(cornerMarkedImg, mtx, dist, None, mtx)’
 
 ![alt text][image1]
 
 ### Pipeline (single images)
 
-#### 1. Distortion-corrected image
+#### 1. Distortion Corrected Image
 
-The pickled camera calibration file (‘cam_calibration.p’) saved in the previous step is reloaded into this pipeline and is used to apply correction to images taken on the road. The distortion correction is demonstrated in the image below:
+The pickled camera calibration file ('cam_calibration.p') saved in the previous step is reloaded into this pipeline and is used to apply correction to images taken on the road. The distortion correction is demonstrated in the image below:
 
 ![alt text][image2]
 
 #### 2. Thresholding to Generate Binary Image
 
-A combination of thresholding of gradient in x direction and s-channel thresholding of image in HLS space is used to generate a binary image. The code to generate the binary image is in ‘combined_threshold’ function within ‘image_processing_pipeline.py’. This function call more basic functions which are listed between line ’26 to 86’ in the same file.
+A combination of thresholding of gradient in x direction and s-channel thresholding of image in HLS space is used to generate a binary image. The code to generate the binary image is in 'combined_threshold’ function within 'image_processing_pipeline.py’. This function call more basic functions which are listed between line ’26 to 86’ in the same file.
 
 ![alt text][image3]
 
-To combine these two thresholding methods a logical ‘OR’ operator is used and the result of combined thresholding is shown below.
+To combine these two thresholding methods a logical 'OR’ operator is used and the result of combined thresholding is shown below.
 
 ![alt text][image4]
 
 #### 3. Calculating the Perspective Transform
 
-The perspective transform is an operation which translates the perspective image into a bird’s eye view. The transform is calculated by identifying 4 points in the perspective image (‘src’) and telling the OpenCV function ‘getPerspectiveTransform’ about the corresponding location of these 4 points in the warped image (‘dst’). For this assignment 2 points on the left lane line and 2 points on the right lane line are chosen in the undistorted image with straight lane line and because the lane lines are straight it is easy to tell the corresponding location in bird’s eye view. 
+The perspective transform is an operation which translates the perspective image into a bird’s eye view. The transform is calculated by identifying 4 points in the perspective image ('src’) and telling the OpenCV function 'getPerspectiveTransform’ about the corresponding location of these 4 points in the warped image ('dst’). For this assignment 2 points on the left lane line and 2 points on the right lane line are chosen in the undistorted image with straight lane line and because the lane lines are straight it is easy to tell the corresponding location in bird’s eye view. 
 
-‘M = cv2.getPerspectiveTransform(src, dst)’
+'M = cv2.getPerspectiveTransform(src, dst)’
 
-An inverse transform can also be calculated which will transform points in warped image to points in perspective image by switching ‘src’ and ‘dst’.
+An inverse transform can also be calculated which will transform points in warped image to points in perspective image by switching 'src’ and 'dst’.
 
-‘M = cv2.getPerspectiveTransform(dst, src)’
+'M = cv2.getPerspectiveTransform(dst, src)’
 
-The code for calculating this transform is in ‘calcPerspectiveTransform’ (line 105 to 127) function in ‘image_processing_pipeline’.
+The code for calculating this transform is in 'calcPerspectiveTransform’ (line 105 to 127) function in 'image_processing_pipeline’.
 
 ```python
 src = np.array([[1100, img_height], [685  , 450], [595, 450], [200, img_height]], dtype=np.float32)
@@ -134,7 +134,7 @@ The lane line detected in warped image can be mapped back to the perspective vie
 
 The only difference for the video processing timeline and image processing timeline is that in the video processing timeline the detection of line lane in binary image from second frame onward is limited to the region next to the lane detected in previous frame. This not only makes finding the lanes faster, but it also throws out the outliers which do appear as the car is moving along the road. This also results in smoother lane detection through time.
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to higher quality video](https://youtu.be/WXUYMB9sTPs)(./project_video.mp4)
 
 ![alt text][image12]
 
