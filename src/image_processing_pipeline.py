@@ -94,13 +94,37 @@ def combined_threshld(img):
     #plot_2_img(img, "Undistorted Image", img_ythresh, "Y threshold")
     
     img_hlsthresh = hls_thresh(img, thresh=(120, 255))
-    #plot_2_img(img, "Undistorted Image", img_hlsthresh, "HLS threshold")
+#    plot_2_img(img_xthresh, "X-Sobel Thresholded", img_hlsthresh, "HLS Thresholded")
     
     combined_binary = np.zeros_like(img_xthresh)
     combined_binary[(img_hlsthresh==1) | (img_xthresh==1)] = 1
     #plot_2_img(img, "Undistorted Image", combined_binary, "Combined threshold")
     
     return combined_binary
+
+def calcPerspectiveTransform(pltFlg=False):
+    # read image for perspective transform
+    imgLoc = '../test_images/straight_lines1.jpg'
+    img_pers = cv2.imread(imgLoc)
+    img_pers = cv2.cvtColor(img_pers, cv2.COLOR_BGR2RGB)
+    img_height = img_pers.shape[0]
+    img_width = img_pers.shape[1]
+    
+    src = np.array([[1100, img_height], [685  , 450], [595, 450], [200, img_height]], dtype=np.float32)
+    dst = np.array([[1000, img_height], [1000, 0], [240, 0], [240, img_height]], dtype=np.float32)
+
+    M = cv2.getPerspectiveTransform(src, dst)
+    M_inv = cv2.getPerspectiveTransform(dst, src)
+    
+    if pltFlg:
+        warp_transform = perspective_transform(img_pers, M)
+        
+        img_pers_with_lane = cv2.polylines(img_pers, [np.int32(src)], True, (255,0,0),3)
+        warp_transform_with_lane = cv2.polylines(warp_transform, [np.int32(dst)], True, (255,0,0),3)
+        
+        plot_2_img(img_pers_with_lane, 'Undistorted Image', warp_transform_with_lane, 'Warped Image')
+    
+    return M, M_inv
 
 def perspective_transform(image, M):
     img_size = (image.shape[1], image.shape[0])
@@ -111,6 +135,7 @@ def window_search(binary_warped):
     # Assuming you have created a warped binary image called "binary_warped"
     # Take a histogram of the bottom half of the image
     histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
+
     # Create an output image to draw on and  visualize the result
     out_img = np.dstack((binary_warped, binary_warped, binary_warped))*255
     # Find the peak of the left and right halves of the histogram
@@ -180,9 +205,6 @@ def window_search(binary_warped):
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
     
-#     plt.imshow(out_img)
-#     plt.show()
-
     return left_fit, right_fit
 
 def lane_visualization_warped(binary_warped, left_fit, right_fit):
@@ -216,7 +238,8 @@ def lane_visualization_warped(binary_warped, left_fit, right_fit):
     cv2.fillPoly(window_img, np.int_([right_line_pts]), (0,255, 0))
     result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
     
-    return result    
+    return result
+
 def update_lane_pos(binary_warped, left_fit, right_fit):
     # Assume you now have a new warped binary image 
     # from the next frame of video (also called "binary_warped")
@@ -293,25 +316,10 @@ def project_lane(img, left_fit, right_fit, M_inv):
    
     return result    
 
-def calcPerspectiveTransform():
-    # read image for perspective transform
-    imgLoc = '../test_images/straight_lines1.jpg'
-    img_pers = cv2.imread(imgLoc)
-    img_pers = cv2.cvtColor(img_pers, cv2.COLOR_BGR2RGB)
-    img_height = img_pers.shape[0]
-    img_width = img_pers.shape[1]
-    
-    src = np.array([[1100, img_height], [685  , 450], [590, 450], [200, img_height]], dtype=np.float32)
-    dst = np.array([[1000, img_height], [1000, 0], [240, 0], [240, img_height]], dtype=np.float32)
-    M = cv2.getPerspectiveTransform(src, dst)
-    M_inv = cv2.getPerspectiveTransform(dst, src)
-    
-    return M, M_inv
-
 def laneMarker(img, M, M_inv, mtx, dist, counter, left_fit_prev, right_fit_prev):
     # correct camera distortion
     imgUndistort = cv2.undistort(img, mtx, dist, None, mtx)
-
+    
     # Get the binary image 
     combined_binary = combined_threshld(img)
     
@@ -345,18 +353,17 @@ def laneMarker(img, M, M_inv, mtx, dist, counter, left_fit_prev, right_fit_prev)
     composite_img[20:20+unwarped_small.shape[0], 20:20+unwarped_small.shape[1], :] = 255*np.dstack((combined_binary_small, combined_binary_small, combined_binary_small))
     composite_img[20:20+unwarped_small.shape[0], 40+unwarped_small.shape[1]:40+2*unwarped_small.shape[1], :] = unwarped_small
 
-
     return composite_img, left_fit, right_fit    
 
 
 if __name__ == '__main__':
 
     # calculate perspective transform
-    M, M_inv = calcPerspectiveTransform()
-
+    M, M_inv = calcPerspectiveTransform(pltFlg=False)
+    
     # read image
-#     filename = 'straight_lines2.jpg'
-    filename = 'test5.jpg'
+    filename = 'straight_lines1.jpg'
+#     filename = 'test5.jpg'
     imgLoc = r'../test_images/' + filename
 
     img = cv2.imread(imgLoc)

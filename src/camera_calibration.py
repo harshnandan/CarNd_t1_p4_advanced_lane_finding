@@ -42,13 +42,6 @@ def calibrateImg(imgList, nx, ny):
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[0:2][::-1], None, None)        
     return mtx, dist, cornerMarkedImg
 
-def perspectiveTransform(corners, image_size, nx):
-    offset = 100
-    src = np.float32([corners[0], corners[nx-1], corners[-1], corners[-nx]])
-    dst = np.float32([[offset, offset], [image_size[0]-offset, offset], [image_size[0]-offset, image_size[1]-offset], 
-                                 [offset, image_size[1]-offset]])
-    return cv2.getPerspectiveTransform(src, dst)
-    
 # Read in an image
 CalImgLocation = r'../camera_cal/*.jpg'
 imgList = glob.glob(CalImgLocation)
@@ -62,13 +55,15 @@ mtx, dist, _ = calibrateImg(imgList, nx, ny)
 cam_calibration = {'mtx':mtx, 'dist':dist}
 pickle.dump(cam_calibration, open(r'..\cam_calibration.p', 'wb'))
 
-
-
 # select a samaple image to test undistortion
-img = cv2.imread(r'../camera_cal/straight_lines1.jpg')
-unDistortedImg= cv2.undistort(img, mtx, dist, None, mtx)
+img = cv2.imread(r'../camera_cal/calibration4.jpg')
+gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+ret, corners = cv2.findChessboardCorners(gray, (nx, ny), None)
+cornerMarkedImg = cv2.drawChessboardCorners(img, (nx, ny), corners, ret)
+
+unDistortedImg= cv2.undistort(cornerMarkedImg, mtx, dist, None, mtx)
 
 # plot the sample undistortion  
-plot_2_img(img, unDistortedImg)
+plot_2_img(cornerMarkedImg, unDistortedImg)
 
 

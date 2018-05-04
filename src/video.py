@@ -37,7 +37,7 @@ class image_processor_class():
 if __name__ == '__main__':
     
     #fileList = glob.glob("../*.mp4")
-    fileList = [r'challenge_video.mp4']
+    fileList = [r'project_video.mp4']
     
     # iterate over all files
     for figIdx, fileName in enumerate(fileList):

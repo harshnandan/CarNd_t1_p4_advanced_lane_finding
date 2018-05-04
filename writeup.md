@@ -19,13 +19,19 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/undistort_output.png "Undistorted"
-[image2]: ./test_images/test1.jpg "Road Transformed"
-[image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+[image1]: ./img/undistort_chessboard.png "Undistorted"
+[image2]: ./img/undistorted_image.jpg "Road Undistorted"
+[image3]: ./img/various_thresholding.png "Binary Example"
+[image4]: ./img/threshold_image.png "Binary combined"
+[image5]: ./img/warped_image.png "Warped Image with Visual Fit"
+[image6]: ./img/warped_binary.png "Warped Binary Image"
+[image7]: ./img/lane_pixel_histogram.png "Histogram"
+[image8]: ./img/window_search.png "Window Search"
+[image9]: ./img/2nd_order_equation.png "Second order polynomial"
+[image10]: ./img/2nd_order_equation_curvature.png "curvature"
+[image11]: ./img/lane_marked_perspective_view.png "output of pipeline"
+
+[image12]: ./output_videos/project_video.gif "Marked Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -33,95 +39,112 @@ The goals / steps of this project are the following:
 
 ---
 
-### Writeup / README
-
-#### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
-
-You're reading it!
-
 ### Camera Calibration
 
-#### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
+It is essential to correct for any distortions introduced by camera. A standalone script ‘camera_calibration.py’ computes the cameta matrix ‘mtx’ and the distortion coefficient ‘dist’ and ‘pickle’ these entities into ‘cam_calibration.p’. The script works through number of calibration images supplied with the problem. The script identifies the corners within the chess board image and computes the camera matrix and distortion coefficient to map them to real world undistorted coordinates provided by the user. The result of applying camera distortion can be clearly seen in the image below.
 
-The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).  
+The camera calibration function provided within openCV requires specification of ‘objpoints’, which are the (x, y, z) coordinates of the chessboard corners in the world. As the chessboard is 2D the ‘z’ coordinate can be assumed to be ‘0’. ‘objpoints’ is appended to a list every time all the corners are detected on the image. ‘imgpoints’ will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
 
-I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
+‘ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)’
 
 I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
+
+‘unDistortedImg= cv2.undistort(cornerMarkedImg, mtx, dist, None, mtx)’
 
 ![alt text][image1]
 
 ### Pipeline (single images)
 
-#### 1. Provide an example of a distortion-corrected image.
+#### 1. Distortion-corrected image
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
+The pickled camera calibration file (‘cam_calibration.p’) saved in the previous step is reloaded into this pipeline and is used to apply correction to images taken on the road. The distortion correction is demonstrated in the image below:
+
 ![alt text][image2]
 
-#### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+#### 2. Thresholding to Generate Binary Image
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+A combination of thresholding of gradient in x direction and s-channel thresholding of image in HLS space is used to generate a binary image. The code to generate the binary image is in ‘combined_threshold’ function within ‘image_processing_pipeline.py’. This function call more basic functions which are listed between line ’26 to 86’ in the same file.
 
 ![alt text][image3]
 
-#### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
+To combine these two thresholding methods a logical ‘OR’ operator is used and the result of combined thresholding is shown below.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+![alt text][image4]
+
+#### 3. Calculating the Perspective Transform
+
+The perspective transform is an operation which translates the perspective image into a bird’s eye view. The transform is calculated by identifying 4 points in the perspective image (‘src’) and telling the OpenCV function ‘getPerspectiveTransform’ about the corresponding location of these 4 points in the warped image (‘dst’). For this assignment 2 points on the left lane line and 2 points on the right lane line are chosen in the undistorted image with straight lane line and because the lane lines are straight it is easy to tell the corresponding location in bird’s eye view. 
+
+‘M = cv2.getPerspectiveTransform(src, dst)’
+
+An inverse transform can also be calculated which will transform points in warped image to points in perspective image by switching ‘src’ and ‘dst’.
+
+‘M = cv2.getPerspectiveTransform(dst, src)’
+
+The code for calculating this transform is in ‘calcPerspectiveTransform’ (line 105 to 127) function in ‘image_processing_pipeline’.
 
 ```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
-```
+src = np.array([[1100, img_height], [685  , 450], [595, 450], [200, img_height]], dtype=np.float32)
 
+dst = np.array([[1000, img_height], [1000, 0], [240, 0], [240, img_height]], dtype=np.float32)
+```
 This resulted in the following source and destination points:
 
 | Source        | Destination   | 
 |:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+| 1100, 720      | 1000, 720        | 
+| 685, 450      | 1000, 0      |
+| 595, 450     | 240, 0      |
+| 200, 720      | 240, 720        |
 
 I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
 
-![alt text][image4]
-
-#### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
-
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
 
 ![alt text][image5]
 
-#### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+#### 4. Lane Identification
 
-I did this in lines # through # in my code in `my_other_file.py`
-
-#### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
-
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+Binary form of warped image (shown below) is used to initiate the lane finding algorithm. As the binary image is a 2D matrix containing only ones and zeros, summing the value of pixel in vertical direction indicates where the lanes are. The starting position of the lane is taken to be the midpoint of the left and right bumps in the figure below.
 
 ![alt text][image6]
+![alt text][image7]
+
+A sliding window approach is utilized to find the lane position in rest of the image. Figure below shows how the sliding window identifies the lane line in rest of image. (line number 134 to 208)
+
+![alt text][image8]
+
+#### 5. Radius of Curvature
+
+A second order polynomial is fitted through the identified point and radius of curvature is calculated as follows (equations are borrowed from Udacity course material)
+
+![alt text][image9]
+
+![alt text][image10]
+
+#### 6. Lane Demarcation in Perspective View
+
+The lane line detected in warped image can be mapped back to the perspective view using the inverse transform matrix. The binary and the warped image is shown as a subfigure in the marked figure to get a sense of what is the major steps performed by the pipeline. This helps a lot to debug and understand particular behavior of the pipeline.
+
+
+![alt text][image11]
 
 ---
 
 ### Pipeline (video)
 
-#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+The only difference for the video processing timeline and image processing timeline is that in the video processing timeline the detection of line lane in binary image from second frame onward is limited to the region next to the lane detected in previous frame. This not only makes finding the lanes faster, but it also throws out the outliers which do appear as the car is moving along the road. This also results in smoother lane detection through time.
 
 Here's a [link to my video result](./project_video.mp4)
+
+![alt text][image12]
 
 ---
 
 ### Discussion
 
-#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+#### Limitations of current pipeline:
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+##### The pipeline will fail if the lane line does not start from the bottom edge of the figure.
+
+##### Also, if a lane line disappears from the frame the lane updating algorithm will fail when the lane line reappears.  
+
