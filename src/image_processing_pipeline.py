@@ -267,10 +267,10 @@ def update_lane_pos(binary_warped, left_fit, right_fit):
 
     return left_fit, right_fit
 
-def calc_curvature(left_fit, right_fit, img_height):
+def calc_curvature_center(left_fit, right_fit, img_height, img_width):
     # Define conversions in x and y from pixels space to meters
     ym_per_pix = 30/720 # meters per pixel in y dimension
-    xm_per_pix = 3.7/700 # meters per pixel in x dimension
+    
     
     # Generate x and y values for plotting
     ploty = np.linspace(0, img_height-1, img_height )
@@ -278,6 +278,10 @@ def calc_curvature(left_fit, right_fit, img_height):
     right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
     
     # Fit new polynomials to x,y in world space
+    lane_width = right_fitx[-1] - left_fitx[-1]
+    xm_per_pix = 3.7/lane_width # meters per pixel in x dimension
+    
+    #
     left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
     right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
     # Calculate the new radii of curvature
@@ -286,8 +290,10 @@ def calc_curvature(left_fit, right_fit, img_height):
     right_curverad = np.average((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
     
     lane_curvature = np.mean([left_curverad, right_curverad])
+    lane_position = np.mean([right_fitx[-1], left_fitx[-1]])
+    lane_offset = (lane_position - img_width//2) * xm_per_pix
     
-    return lane_curvature
+    return lane_curvature, lane_offset
 
 def project_lane(img, left_fit, right_fit, M_inv):
     # Create new image to draw lines on
@@ -337,11 +343,13 @@ def laneMarker(img, M, M_inv, mtx, dist, counter, left_fit_prev, right_fit_prev)
         right_fit = 0.9 * right_fit + 0.1 * right_fit_prev
     
     unwarped_marked = lane_visualization_warped(unwarped, left_fit, right_fit)
-    radius = calc_curvature(left_fit, right_fit, unwarped_marked.shape[0])
+    lane_curv, lane_offset = calc_curvature_center(left_fit, right_fit, 
+                                   unwarped_marked.shape[0], unwarped_marked.shape[1])
     
-    cv2.putText(imgUndistort, 'Curvature: {:.0f} m'.format(radius), 
-                (int(imgUndistort.shape[1]/1.7), 100), cv2.FONT_ITALIC, 1.5, (255,255,255), 5)
-    
+    cv2.putText(imgUndistort, 'Lane Curvature: {:.0f} m'.format(lane_curv), 
+                (int(imgUndistort.shape[1]/1.9), 100), cv2.FONT_ITALIC, 1.5, (255,255,255), 5)
+    cv2.putText(imgUndistort, 'Vehicle Offset: {:.2f} m'.format(lane_offset), 
+                (int(imgUndistort.shape[1]/1.9), 150), cv2.FONT_ITALIC, 1.5, (255,255,255), 5)
 
     # project lane on the undistorted image
     marked_img = project_lane(imgUndistort, left_fit, right_fit, M_inv)
