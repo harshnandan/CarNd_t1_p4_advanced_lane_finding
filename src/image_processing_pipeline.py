@@ -391,7 +391,7 @@ if __name__ == '__main__':
     imgUndistort, left_fit, right_fit, lane_curv, lane_offset, calc_check, combined_binary, unwarped_marked = \
         laneMarker(img, M, M_inv, mtx, dist, 0, np.array([0, 0, 0]), np.array([0, 0, 0]))
     
-    composite_img = annotate_output_figure(imgUndistort, left_fit, right_fit, lane_curv, lane_offset, combined_binary, unwarped_marked, M_inv)
+    composite_img = annotate_output_figure(imgUndistort, left_fit, right_fit, combined_binary, unwarped_marked, M_inv)
     plt.imshow(composite_img)
     plt.savefig(r'../output_images/' + filename)
     plt.show()

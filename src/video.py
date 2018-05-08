@@ -32,7 +32,7 @@ class image_processor_class():
         mtx, dist = load_cam_calibration()
         
         # Find left and right line lanes
-        imgUndistort, left_fit, right_fit, lane_curv, lane_offset, calc_check, combined_binary, unwarped_marked = \
+        imgUndistort, left_fit, right_fit, _, _, calc_check, combined_binary, unwarped_marked = \
             laneMarker(image, M, M_inv, mtx, dist, 0, np.array([0, 0, 0]), np.array([0, 0, 0]))
         
         self.moving_average(calc_check, left_fit, right_fit)
@@ -55,9 +55,9 @@ class image_processor_class():
                 self.left_ma_arr[self.av_window-1, :] = left_fit
                 self.right_ma_arr[self.av_window-1, :] = right_fit
             else:
-                self.valid_estimate[self.av_window-1] = 0
-                self.left_ma_arr[self.av_window-1, :] = np.array([0, 0, 0])
-                self.right_ma_arr[self.av_window-1, :] = np.array([0, 0, 0])
+                self.valid_estimate[self.av_window-1] = 1
+                self.left_ma_arr[self.av_window-1, :] = self.left_ma
+                self.right_ma_arr[self.av_window-1, :] = self.right_ma
             self.av_window += 1
         else:
             self.left_ma_arr[0:(self.av_window_limit-1), :] = self.left_ma_arr[1:(self.av_window_limit), :]
@@ -96,8 +96,8 @@ if __name__ == '__main__':
         outputFile = '../output_videos/' + fileName
         print(inputFile)
         
-        clip1 = VideoFileClip(inputFile).subclip(0, 5)
-        #clip1 = VideoFileClip(inputFile)
+#         clip1 = VideoFileClip(inputFile).subclip(0, 5)
+        clip1 = VideoFileClip(inputFile)
         
         # process video clip
         oImageProc = image_processor_class(clip1, outputFile)
