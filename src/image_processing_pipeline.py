@@ -285,7 +285,7 @@ def calc_curvature_center(left_fit, right_fit, img_height, img_width):
     left_fit_cr = np.polyfit(ploty*ym_per_pix, left_fitx*xm_per_pix, 2)
     right_fit_cr = np.polyfit(ploty*ym_per_pix, right_fitx*xm_per_pix, 2)
     # Calculate the new radii of curvature
-    y_eval = ploty[ploty.shape[0]//2:ploty.shape[0]]
+    y_eval = ploty[-1]
     left_curverad = np.average((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
     right_curverad = np.average((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
     
@@ -293,7 +293,9 @@ def calc_curvature_center(left_fit, right_fit, img_height, img_width):
     lane_position = np.mean([right_fitx[-1], left_fitx[-1]])
     lane_offset = (lane_position - img_width//2) * xm_per_pix
     
-    return lane_curvature, lane_offset
+    calc_check = 2 > left_curverad / right_curverad > 0.5
+    
+    return lane_curvature, lane_offset, calc_check
 
 def project_lane(img, left_fit, right_fit, M_inv):
     # Create new image to draw lines on
@@ -338,13 +340,18 @@ def laneMarker(img, M, M_inv, mtx, dist, counter, left_fit_prev, right_fit_prev)
         left_fit, right_fit = window_search(unwarped)
     else:
         left_fit, right_fit = update_lane_pos(unwarped, left_fit_prev, right_fit_prev)
-        # smoothing
-        left_fit = 0.9 * left_fit + 0.1 * left_fit_prev
-        right_fit = 0.9 * right_fit + 0.1 * right_fit_prev
     
     unwarped_marked = lane_visualization_warped(unwarped, left_fit, right_fit)
-    lane_curv, lane_offset = calc_curvature_center(left_fit, right_fit, 
+    lane_curv, lane_offset, calc_check = calc_curvature_center(left_fit, right_fit, 
                                    unwarped_marked.shape[0], unwarped_marked.shape[1])
+    
+    return imgUndistort, left_fit, right_fit, lane_curv, lane_offset, calc_check, combined_binary, unwarped_marked
+
+
+def annotate_output_figure(imgUndistort, left_fit, right_fit, combined_binary, unwarped_marked, M_inv):
+    
+    lane_curv, lane_offset, calc_check = calc_curvature_center(left_fit, right_fit, 
+                               unwarped_marked.shape[0], unwarped_marked.shape[1])
     
     cv2.putText(imgUndistort, 'Lane Curvature: {:.0f} m'.format(lane_curv), 
                 (int(imgUndistort.shape[1]/1.9), 100), cv2.FONT_ITALIC, 1.5, (255,255,255), 5)
@@ -361,7 +368,7 @@ def laneMarker(img, M, M_inv, mtx, dist, counter, left_fit_prev, right_fit_prev)
     composite_img[20:20+unwarped_small.shape[0], 20:20+unwarped_small.shape[1], :] = 255*np.dstack((combined_binary_small, combined_binary_small, combined_binary_small))
     composite_img[20:20+unwarped_small.shape[0], 40+unwarped_small.shape[1]:40+2*unwarped_small.shape[1], :] = unwarped_small
 
-    return composite_img, left_fit, right_fit    
+    return composite_img  
 
 
 if __name__ == '__main__':
@@ -381,8 +388,10 @@ if __name__ == '__main__':
     mtx, dist = load_cam_calibration()
     
     # detect lane location and mark them
-    composite_img, left_fit, right_fit = laneMarker(img, M, M_inv, mtx, dist, 0, np.array([0, 0, 0]), np.array([0, 0, 0]))
+    imgUndistort, left_fit, right_fit, lane_curv, lane_offset, calc_check, combined_binary, unwarped_marked = \
+        laneMarker(img, M, M_inv, mtx, dist, 0, np.array([0, 0, 0]), np.array([0, 0, 0]))
     
+    composite_img = annotate_output_figure(imgUndistort, left_fit, right_fit, lane_curv, lane_offset, combined_binary, unwarped_marked, M_inv)
     plt.imshow(composite_img)
     plt.savefig(r'../output_images/' + filename)
     plt.show()
